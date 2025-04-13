@@ -25,21 +25,6 @@ export default function TemplateFilter({ technologies, onFilterChange }: Templat
     onFilterChange([]);
   };
 
-  // Variantes d'animation pour les filtres
-  const filterButtonVariants = {
-    idle: {
-      scale: 1,
-    },
-    selected: {
-      scale: [1, 1.1, 1],
-      transition: {
-        duration: 0.3,
-      }
-    },
-    tap: {
-      scale: 0.95,
-    }
-  };
 
   const containerVariants = {
     hidden: { opacity: 0 },

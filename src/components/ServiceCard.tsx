@@ -23,13 +23,13 @@ export default function ServiceCard({
   buttonLink,
   highlighted = false
 }: ServiceCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
+  const [, setIsHovered] = useState(false);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const { currentTarget, clientX, clientY } = e;
-    const { left, top, width, height } = currentTarget.getBoundingClientRect();
+    const { left, top } = currentTarget.getBoundingClientRect();
     
     mouseX.set(clientX - left);
     mouseY.set(clientY - top);
