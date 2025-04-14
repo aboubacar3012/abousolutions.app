@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SmoothScroll from "../components/SmoothScroll";
-import CustomCursor from "../components/CustomCursor";
 import ParticlesBackground from "../components/ParticlesBackground";
 
 
@@ -32,7 +31,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background-dark`}
       >
         <SmoothScroll>
-          <CustomCursor />
           <ParticlesBackground />
           {children}
         </SmoothScroll>

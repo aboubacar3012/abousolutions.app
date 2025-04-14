@@ -1,175 +1,140 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from "react";
 
-interface Particle {
+type Bubble = {
+  id: number;
   x: number;
   y: number;
   size: number;
-  speedX: number;
-  speedY: number;
-  color: string;
   opacity: number;
-}
+  speed: number;
+  color: string;
+  rotation: number; // new property for rotation effect
+};
 
 export default function ParticlesBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const particlesRef = useRef<Particle[]>([]);
-  const requestIdRef = useRef<number>(0);
-  const mousePosition = useRef({ x: 0, y: 0 });
+  const [bubbles, setBubbles] = useState<Bubble[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<number>(0);
+  const [dimensions, setDimensions] = useState({
+    width: typeof window !== "undefined" ? window.innerWidth : 1200,
+    height: typeof window !== "undefined" ? window.innerHeight : 800,
+  });
 
-  const colors = [
-    'rgba(77, 192, 255, 0.4)',     // bleu clair
-    'rgba(49, 120, 198, 0.3)',     // bleu principal
-    'rgba(16, 69, 145, 0.25)',     // bleu foncé
-    'rgba(255, 255, 255, 0.3)',    // blanc
-  ];
+  // Génère des bulles avec des propriétés aléatoires
+  const generateBubbles = () => {
+    const width = dimensions.width;
+    const height = dimensions.height;
+    const count = Math.min(
+      20,
+      Math.max(10, Math.floor((width * height) / 50000))
+    );
 
+    // Palette de couleurs professionnelle adaptée à un site dark et moderne
+    const colors = [
+      "rgba(56, 189, 248, 0.3)",
+      "rgba(59, 130, 246, 0.3)",
+      "rgba(99, 102, 241, 0.3)",
+      "rgba(139, 92, 246, 0.3)",
+      "rgba(236, 72, 153, 0.3)",
+      "rgba(6, 182, 212, 0.3)",
+    ];
+
+    const newBubbles: Bubble[] = [];
+
+    for (let i = 0; i < count; i++) {
+      newBubbles.push({
+        id: i,
+        x: Math.random() * width,
+        y: Math.random() * height,
+        size: 50 + Math.random() * 100,
+        opacity: 0.1 + Math.random() * 0.3,
+        speed: 0.2 + Math.random() * 0.5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rotation: Math.random() * 360, // initial random rotation
+      });
+    }
+
+    setBubbles(newBubbles);
+  };
+
+  // Gère le redimensionnement de la fenêtre
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Resize canvas to full window
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-
-    // Create initial particles
-    const createParticles = () => {
-      const particleCount = Math.min(Math.floor(window.innerWidth / 10), 100);
-      particlesRef.current = [];
-
-      for (let i = 0; i < particleCount; i++) {
-        particlesRef.current.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          size: Math.random() * 5 + 1,
-          speedX: (Math.random() - 0.5) * 0.7,
-          speedY: (Math.random() - 0.5) * 0.7,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          opacity: Math.random() * 0.6 + 0.2
-        });
-      }
-    };
-
-    // Animation loop
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      particlesRef.current.forEach((p) => {
-        // Calculate distance to mouse and add slight attraction
-        const dx = mousePosition.current.x - p.x;
-        const dy = mousePosition.current.y - p.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < 200) {
-          const angle = Math.atan2(dy, dx);
-          const forceX = Math.cos(angle) * 0.05;
-          const forceY = Math.sin(angle) * 0.05;
-          p.speedX += forceX;
-          p.speedY += forceY;
-        }
-
-        // Apply maximum speed limit
-        const speed = Math.sqrt(p.speedX * p.speedX + p.speedY * p.speedY);
-        if (speed > 1) {
-          p.speedX = (p.speedX / speed) * 1;
-          p.speedY = (p.speedY / speed) * 1;
-        }
-
-        // Move particles
-        p.x += p.speedX;
-        p.y += p.speedY;
-
-        // Boundary check with bounce
-        if (p.x < 0 || p.x > canvas.width) {
-          p.speedX *= -1;
-        }
-        if (p.y < 0 || p.y > canvas.height) {
-          p.speedY *= -1;
-        }
-
-        // Draw particle
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.opacity;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // Add subtle glow effect
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
-        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
-        gradient.addColorStop(0, p.color);
-        gradient.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = gradient;
-        ctx.globalAlpha = p.opacity * 0.5;
-        ctx.fill();
-        ctx.globalAlpha = 1;
+    const handleResize = () => {
+      setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
       });
-
-      // Draw connections between nearby particles
-      ctx.lineWidth = 0.5;
-      particlesRef.current.forEach((p1, i) => {
-        particlesRef.current.slice(i + 1).forEach(p2 => {
-          const dx = p1.x - p2.x;
-          const dy = p1.y - p2.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          
-          if (distance < 100) {
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = `rgba(77, 192, 255, ${0.2 * (1 - distance / 100)})`;
-            ctx.stroke();
-          }
-        });
-      });
-
-      requestIdRef.current = requestAnimationFrame(animate);
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
-      mousePosition.current = {
-        x: e.clientX,
-        y: e.clientY
-      };
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches[0]) {
-        mousePosition.current = {
-          x: e.touches[0].clientX,
-          y: e.touches[0].clientY
-        };
-      }
-    };
-
-    window.addEventListener('resize', resizeCanvas);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchmove', handleTouchMove);
-
-    resizeCanvas();
-    createParticles();
-    animate();
-
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('touchmove', handleTouchMove);
-      cancelAnimationFrame(requestIdRef.current);
-    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Génération des bulles lors du chargement ou redimensionnement
+  useEffect(() => {
+    generateBubbles();
+  }, []);
+
+  // Animation des bulles flottantes avec rotation
+  useEffect(() => {
+    const animateBubbles = () => {
+      setBubbles((prevBubbles) =>
+        prevBubbles.map((bubble) => {
+          let y = bubble.y - bubble.speed;
+          let x = bubble.x + Math.sin(Date.now() / 3000 + bubble.id) * 0.5;
+
+          if (y < -bubble.size) {
+            y = dimensions.height + bubble.size;
+            x = Math.random() * dimensions.width;
+          }
+          if (x < -bubble.size) x = dimensions.width + bubble.size;
+          if (x > dimensions.width + bubble.size) x = -bubble.size;
+
+          return { ...bubble, x, y };
+        })
+      );
+      animationRef.current = requestAnimationFrame(animateBubbles);
+    };
+
+    if (bubbles.length > 0) {
+      animationRef.current = requestAnimationFrame(animateBubbles);
+    }
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [bubbles.length, dimensions.height, dimensions.width]);
+
   return (
-    <canvas 
-      ref={canvasRef}
-      className="fixed top-0 left-0 w-full h-full pointer-events-none z-0 opacity-60"
-    />
+    <div
+      ref={containerRef}
+      className="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] bg-gradient-to-br from-black to-gray-900 overflow-hidden" // modified gradient for dark look
+    >
+      {/* Overlay pour ajouter une teinte dark */}
+      <div className="absolute inset-0 opacity-40 bg-black"></div>
+
+      {/* Les bulles */}
+      {bubbles.map((bubble) => (
+        <div
+          key={bubble.id}
+          className="absolute rounded-full blur-xl"
+          style={{
+            left: `${bubble.x}px`,
+            top: `${bubble.y}px`,
+            width: `${bubble.size}px`,
+            height: `${bubble.size}px`,
+            backgroundColor: bubble.color,
+            opacity: bubble.opacity,
+            willChange: "transform",
+            transform: `translateZ(0) rotate(${bubble.rotation}deg)`, // include rotation
+          }}
+        />
+      ))}
+
+      {/* Overlay de teinte pour assurer la visibilité du contenu */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+    </div>
   );
 }
